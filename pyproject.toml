@@ -1,0 +1,38 @@
+[project]
+name = "cloud-run-sandbox-adk-deep-dive"
+version = "0.1.0"
+description = "A measured Gemini 3.5 Flash and Google ADK repository-review agent using native Cloud Run sandboxes."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Thomas Chong" }]
+dependencies = [
+  "google-adk==2.4.0",
+  "pytest>=8.3,<9",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sandbox_analyst"]
+
+[project.optional-dependencies]
+dev = [
+  "markdown>=3.8,<4",
+  "pytest-cov>=6,<7",
+  "ruff>=0.12,<0.13",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

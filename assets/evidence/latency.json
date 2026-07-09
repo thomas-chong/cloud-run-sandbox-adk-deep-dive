@@ -1,0 +1,179 @@
+{
+  "scenario": "latency",
+  "service_url": "https://sandbox-analyst-adk-467098945141.us-central1.run.app",
+  "session_id": "evidence-latency-487945c2",
+  "client_wall_ms": 17331.96,
+  "events": [
+    {
+      "modelVersion": "gemini-3.5-flash",
+      "content": {
+        "parts": [
+          {
+            "functionCall": {
+              "id": "adk-46e9135c-7a2c-4bc6-9c11-e91b5dce26df",
+              "args": {
+                "samples": 30
+              },
+              "name": "benchmark_sandbox_startup"
+            },
+            "thoughtSignature": "AY89a1-xB49yvEqgvp3_W7JOEAQvgRJC0Aiq6uvEogk5MkprmiELvi0uyfen42mphbo="
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "usageMetadata": {
+        "candidatesTokenCount": 17,
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 17
+          }
+        ],
+        "promptTokenCount": 1144,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1144
+          }
+        ],
+        "totalTokenCount": 1161,
+        "trafficType": "PROVISIONED_THROUGHPUT"
+      },
+      "invocationId": "e-fe315d90-eb2c-4d65-a351-f793cf19c4ae",
+      "author": "sandbox_pr_reviewer",
+      "actions": {
+        "stateDelta": {},
+        "artifactDelta": {},
+        "requestedAuthConfigs": {},
+        "requestedToolConfirmations": {}
+      },
+      "nodeInfo": {
+        "path": "sandbox_pr_reviewer@1"
+      },
+      "longRunningToolIds": [],
+      "id": "c98cc4a4-16be-44c4-8398-ab0257111c48",
+      "timestamp": 1783634151.514977
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "functionResponse": {
+              "id": "adk-46e9135c-7a2c-4bc6-9c11-e91b5dce26df",
+              "name": "benchmark_sandbox_startup",
+              "response": {
+                "status": "success",
+                "metric": "sandbox do -- /bin/true wall time",
+                "scope": "inside one warm Cloud Run service instance",
+                "successful_samples": 30,
+                "failed_samples": 0,
+                "min_ms": 408.941,
+                "p50_ms": 428.347,
+                "p95_ms": 455.854,
+                "p99_ms": 470.934,
+                "max_ms": 470.934,
+                "mean_ms": 431.902,
+                "raw_ms": [
+                  408.941,
+                  411.805,
+                  412.636,
+                  419.308,
+                  419.535,
+                  420.234,
+                  421.636,
+                  422.254,
+                  422.63,
+                  423.492,
+                  423.597,
+                  423.925,
+                  424.414,
+                  427.881,
+                  428.27,
+                  428.424,
+                  428.751,
+                  429.003,
+                  431.236,
+                  432.464,
+                  438.133,
+                  438.582,
+                  443.916,
+                  446.491,
+                  449.871,
+                  449.949,
+                  451.179,
+                  451.711,
+                  455.854,
+                  470.934
+                ],
+                "excludes": [
+                  "Cloud Run cold start",
+                  "network RTT",
+                  "Gemini latency"
+                ]
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocationId": "e-fe315d90-eb2c-4d65-a351-f793cf19c4ae",
+      "author": "sandbox_pr_reviewer",
+      "actions": {
+        "stateDelta": {},
+        "artifactDelta": {},
+        "requestedAuthConfigs": {},
+        "requestedToolConfirmations": {}
+      },
+      "nodeInfo": {
+        "path": "sandbox_pr_reviewer@1"
+      },
+      "id": "70221cfe-4c2b-4321-84bb-2d4143e19c3b",
+      "timestamp": 1783634165.8861146
+    },
+    {
+      "modelVersion": "gemini-3.5-flash",
+      "content": {
+        "parts": [
+          {
+            "text": "I have executed the startup benchmark with 30 successful samples. Below is the summary of the measured latency metrics for the sandbox lifecycle:\n\n### Warm-Instance Sandbox Startup Metrics (30 Samples)\n\n*   **Minimum:** 408.94 ms\n*   **p50 (Median):** 428.35 ms\n*   **Mean:** 431.90 ms\n*   **p95:** 455.85 ms\n*   **p99:** 470.93 ms\n*   **Maximum:** 470.93 ms\n\n### Important Distinction regarding Latency Metrics\nPlease note that these metrics specifically measure the one-shot creation, execution of a trivial command (`/bin/true`), and immediate deletion of the egress-denied container sandbox **within an already warm, running Cloud Run instance**. \n\nThis latency **does not** include:\n1.  **Cloud Run service cold starts** (the time it takes for Google Cloud to provision a new container instance for the hosting service itself).\n2.  **Model generation/reasoning latency** (the time the LLM takes to process, think, and generate the response).\n3.  **Network Round-Trip Time (RTT)** between your client, the LLM provider, and the underlying cloud infrastructure.",
+            "thoughtSignature": "AY89a1-PRWaoqKUK-_2kR_SbmP9sLEpY0VhKThKm05hXJpVOa-llmbSD1eQ0BIm3m4w="
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "usageMetadata": {
+        "candidatesTokenCount": 286,
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 286
+          }
+        ],
+        "promptTokenCount": 1482,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1482
+          }
+        ],
+        "totalTokenCount": 1768,
+        "trafficType": "PROVISIONED_THROUGHPUT"
+      },
+      "invocationId": "e-fe315d90-eb2c-4d65-a351-f793cf19c4ae",
+      "author": "sandbox_pr_reviewer",
+      "actions": {
+        "stateDelta": {},
+        "artifactDelta": {},
+        "requestedAuthConfigs": {},
+        "requestedToolConfirmations": {}
+      },
+      "nodeInfo": {
+        "path": "sandbox_pr_reviewer@1"
+      },
+      "id": "57e8d447-cded-4aea-b7b5-f9ab8275dc9c",
+      "timestamp": 1783634165.907384
+    }
+  ]
+}
