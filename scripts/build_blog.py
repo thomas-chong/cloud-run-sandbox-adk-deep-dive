@@ -60,7 +60,7 @@ def build() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="A measured deep dive into Gemini 3.5 Flash, Google ADK, and native Cloud Run sandboxes.">
+<meta name="description" content="Build a Google ADK repository-review agent that runs untrusted tests and generated patches inside native Cloud Run sandboxes.">
 <title>The agent that runs the PR is part of the threat model</title>
 <style>
 @font-face {{ font-family:'Google Sans Flex Variable'; font-style:normal; font-display:swap; font-weight:1 1000; src:url(https://cdn.jsdelivr.net/fontsource/fonts/google-sans-flex:vf@latest/latin-wght-normal.woff2) format('woff2-variations'); }}
@@ -103,8 +103,8 @@ footer {{ border-top:1px solid var(--line); padding:34px; text-align:center; col
 </style>
 </head>
 <body>
-<header class="topbar"><div class="brand">Cloud Run Sandbox × ADK</div><nav><a href="#the-measured-result-first">Evidence</a><a href="#cost-optimization-tokens-dominate-this-example">Cost</a><a href="#cloud-run-versus-gke-and-hosted-sandbox-services">Compare</a><a href="https://github.com/thomas-chong/cloud-run-sandbox-adk-deep-dive">GitHub</a></nav></header>
-<section class="hero"><div class="eyebrow">Developer deep dive · verified July 9, 2026</div><h1>The agent that runs the PR is part of the threat model</h1><p>A measured implementation of Gemini 3.5 Flash, Google ADK, and native Cloud Run sandboxes—complete with raw events, boundary probes, latency distributions, and cost math.</p><div class="badges"><span class="badge">19.10 s full repair turn</span><span class="badge">428.347 ms lifecycle p50</span><span class="badge">30/30 benchmark runs</span><span class="badge">14 local tests</span></div></section>
+<header class="topbar"><div class="brand">Cloud Run Sandbox × ADK</div><nav><a href="#what-happened-in-the-measured-run">Evidence</a><a href="#cost-optimization-tokens-dominate-this-example">Cost</a><a href="#cloud-run-versus-gke-and-hosted-sandbox-services">Compare</a><a href="https://github.com/thomas-chong/cloud-run-sandbox-adk-deep-dive">GitHub</a></nav></header>
+<section class="hero"><div class="eyebrow">Developer deep dive · verified July 9, 2026</div><h1>The agent that runs the PR is part of the threat model</h1><p>A real Google ADK repository-review workflow that runs untrusted tests and generated patches inside native Cloud Run sandboxes.</p><div class="badges"><span class="badge">19.10 s full repair turn</span><span class="badge">428.347 ms lifecycle p50</span><span class="badge">30/30 benchmark runs</span><span class="badge">14 local tests</span></div></section>
 <div class="layout"><aside class="toc">{toc}</aside><article>{article}</article></div>
 <footer>Measured evidence, not a synthetic benchmark. Cloud Run sandboxes remain Public Preview.</footer>
 </body></html>'''

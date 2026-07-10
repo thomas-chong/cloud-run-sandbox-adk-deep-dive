@@ -1,28 +1,27 @@
 # The agent that runs the PR is part of the threat model
 
-## A measured deep dive into Gemini 3.5 Flash, Google ADK, and native Cloud Run sandboxes
+## Building a Google ADK repository-review agent that runs untrusted tests and generated patches inside native Cloud Run sandboxes
 
 > **Verified on July 9, 2026**  
 > Cloud Run sandboxes are **Public Preview**. Gemini 3.5 Flash is **GA**. The sample pins the latest released Python ADK, `google-adk==2.4.0`.
 
-Google's launch article shows that Cloud Run can start an isolated process. This tutorial asks the questions a production coding agent creates immediately afterward:
+A coding agent does more than generate a patch. It also runs the repository's tests, build hooks, linters, package scripts, and configuration. That is the dangerous part. Repository-controlled code executes while the agent host may have a service account, metadata access, and network egress.
 
-- What if the repository's tests are malicious?
-- Which sandbox boundary actually blocks credentials and exfiltration?
-- Can a detached sandbox survive a multi-step repair loop?
-- What is the measured startup distribution—not one hand-picked number?
-- When does Cloud Run cost less operationally than GKE, E2B, Daytona, or Modal?
-- What state disappears when Cloud Run moves the next request to another instance?
+This article builds one concrete workflow around that risk. A Google ADK agent starts a native Cloud Run sandbox, checks the security boundaries, runs an intentionally failing test suite, writes a repair, reruns the tests, exports a snapshot, and deletes the sandbox. Gemini chooses among narrow, typed tools. Trusted host code fixes the command, paths, mount, timeout, and egress policy before anything runs.
 
-The result is an ADK agent that reviews an intentionally unsafe repository, observes a failing baseline, writes a repair, reruns the tests, exports a snapshot, and deletes the sandbox. Repository code never executes in the trusted ADK process.
+I deployed the workflow on Cloud Run and kept the raw ADK events. The evidence lets us examine three practical questions:
+
+- How should an ADK agent and its tools be structured for a multi-step repository review?
+- What does the sandbox isolate, and what remains visible or writable?
+- How long does the sandbox lifecycle take, and what does a modest monthly workload cost?
 
 ![Architecture of the ADK host and native child sandbox](../assets/architecture.png)
 
 ---
 
-## The measured result first
+## What happened in the measured run
 
-One authenticated ADK turn completed this workflow in **19,098.54 ms** client wall time. The infographic below carries every stage result in a Medium-readable format; the underlying JSON remains available for machine inspection.
+The deployed ADK turn took **19,098.54 ms** from request to final response. It started an egress-denied sandbox, recorded the failing baseline, applied Gemini's 2,309-byte repair, finished with four passing tests, exported the writable overlay, and deleted the sandbox. The figure below shows each stage; the committed JSON contains the complete event payload.
 
 ![Raw full-review stage evidence](../assets/full-review-results.png)
 
