@@ -17,7 +17,6 @@ ASSETS = [
     ROOT / "assets" / "full-review-results.png",
     ROOT / "assets" / "adk-agent-design.png",
     ROOT / "assets" / "adk-test-plan.png",
-    ROOT / "assets" / "deep-dive-differentiation.png",
     ROOT / "assets" / "latency-results.png",
     ROOT / "assets" / "cost-breakdown.png",
     ROOT / "assets" / "platform-decision-matrix.png",

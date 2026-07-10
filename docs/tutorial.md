@@ -29,16 +29,6 @@ This is not a simulated trace. The complete ADK event payload is committed as [`
 
 ---
 
-## Why this is different from Google's launch example
-
-The Cloud Run announcement deliberately optimizes for first contact: enable `--sandbox-launcher`, run a command, explain the default isolation, and preview the forthcoming ADK executor. That is useful, but it does not answer the application-design questions above.
-
-![Official launch example versus this ADK deep dive](../assets/deep-dive-differentiation.png)
-
-The sample uses the **native** sandbox launcher, not Google's older experimental DIY sandbox service.
-
----
-
 ## Version truth: Gemini 3.5 Flash and released ADK
 
 The deployed agent uses:
@@ -650,4 +640,4 @@ The measured trade-off is concrete:
 - no separate sandbox premium, but shared CPU/memory and instance-local state;
 - token cost dominates the example workload more than sandbox compute.
 
-That makes Cloud Run a strong default for bursty Google Cloud-native agents—provided the application treats sandbox lifecycle, state export, artifact validation, and cost telemetry as first-class product code rather than launch-demo details.
+That makes Cloud Run a strong default for bursty Google Cloud-native agents—provided the application treats sandbox lifecycle, state export, artifact validation, and cost telemetry as first-class product code rather than incidental integration details.
