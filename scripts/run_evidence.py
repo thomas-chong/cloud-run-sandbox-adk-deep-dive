@@ -23,9 +23,9 @@ SCENARIOS = {
         "this warm-instance metric from Cloud Run cold start and model latency."
     ),
     "cost": (
-        "Estimate monthly cost for 10,000 invocations, 30 active seconds per "
-        "invocation, effective concurrency 2, 4,000 Gemini input tokens, and "
-        "1,000 output tokens. Explain which component dominates and list every "
+        "Estimate monthly cost for 1,000 repository reviews, 30 active sandbox "
+        "seconds per review, effective concurrency 2, 3,000 Gemini input tokens, "
+        "and 500 output tokens. Explain which component dominates and list every "
         "excluded cost."
     ),
 }

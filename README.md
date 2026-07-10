@@ -155,7 +155,7 @@ It excludes Cloud Run cold start, network RTT, Gemini latency, repository setup,
 
 ![Cost breakdown](assets/cost-breakdown.png)
 
-For the documented 10,000-invocation scenario, the estimate is **$157.954**: $7.950 Cloud Run compute, $0.004 requests, $60 Gemini input, and $90 Gemini output. Tokens account for approximately 95% of the estimate.
+For the documented 1,000-review scenario, the estimate is **$9.7954** before free tier: $0.795 Cloud Run compute, $0.0004 requests, $4.50 Gemini input, and $4.50 Gemini output. Tokens account for 91.88% of the modeled total.
 
 This excludes free tiers, discounts, builds, registry, logging, storage, and egress. It is not a billing quote.
 

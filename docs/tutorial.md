@@ -22,17 +22,7 @@ The result is an ADK agent that reviews an intentionally unsafe repository, obse
 
 ## The measured result first
 
-One authenticated ADK turn completed this workflow in **19,098.54 ms** client wall time:
-
-| Stage | Raw result |
-|---|---:|
-| Start detached sandbox | **248.97 ms** |
-| Inspect runtime boundaries | parent canary hidden; metadata and public egress unreachable |
-| Baseline test suite | **1 passed, 3 failed** in **1,944.52 ms** |
-| Gemini-generated replacement | **2,309 bytes**, SHA-256 `86e71c85cbf72951…` |
-| Re-run test suite | **4 passed, 0 failed** in **702.65 ms** |
-| Export writable overlay | **5,492,224-byte** tar |
-| Delete named sandbox | return code **0** |
+One authenticated ADK turn completed this workflow in **19,098.54 ms** client wall time. The infographic below carries every stage result in a Medium-readable format; the underlying JSON remains available for machine inspection.
 
 ![Raw full-review stage evidence](../assets/full-review-results.png)
 
@@ -44,17 +34,7 @@ This is not a simulated trace. The complete ADK event payload is committed as [`
 
 The Cloud Run announcement deliberately optimizes for first contact: enable `--sandbox-launcher`, run a command, explain the default isolation, and preview the forthcoming ADK executor. That is useful, but it does not answer the application-design questions above.
 
-| Dimension | Launch example | This deep dive |
-|---|---|---|
-| Workload | One-shot generated Python | Persistent, multi-step repository review |
-| Model | Short code-generation call | Gemini 3.5 Flash plans six typed tools across one repair loop |
-| Sandbox lifecycle | `sandbox do` | named `run --detach` → repeated `exec` → `tar` → `delete` |
-| Security proof | Describes defaults | Executes env, metadata, egress, root, mount, and image-visibility probes |
-| Failure evidence | Happy path | Preserves raw failing and passing pytest output |
-| Performance | Published average | 30 raw lifecycle observations with p50/p95/p99 |
-| Cost | No workload model | Explicit Cloud Run + Gemini list-price model |
-| Alternatives | Not the focus | Decision boundary versus GKE, E2B, Daytona, and Modal |
-| UI | No ADK Web walkthrough | Real event-sequence and raw-response screenshots |
+![Official launch example versus this ADK deep dive](../assets/deep-dive-differentiation.png)
 
 The sample uses the **native** sandbox launcher, not Google's older experimental DIY sandbox service.
 
@@ -87,6 +67,116 @@ There is an important ADK timing detail:
 - Google's launch post says the integration will ship in the next ADK version.
 
 The repository therefore pins released ADK 2.4.0 and implements the lifecycle as typed `FunctionTool`s. It does **not** float on unreleased `main`. When the first-party executor reaches PyPI, migrate behind the same broker contract and rerun every boundary probe.
+
+---
+
+## How the ADK agent is designed
+
+The central application object is a normal ADK `Agent`. This is the actual configuration used by the deployed revision—not pseudocode:
+
+```python
+root_agent = Agent(
+    name="sandbox_pr_reviewer",
+    model=os.getenv("MODEL", "gemini-3.5-flash"),
+    description=(
+        "Reviews and repairs an untrusted Python repository through a "
+        "long-lived, egress-denied Cloud Run sandbox."
+    ),
+    instruction=INSTRUCTION,
+    tools=[
+        start_review_workspace,
+        inspect_security_boundaries,
+        run_test_suite,
+        write_candidate_rule_engine,
+        snapshot_workspace,
+        finish_review_workspace,
+        benchmark_sandbox_startup,
+        estimate_monthly_cost,
+    ],
+    code_executor=AuditedCloudRunSandboxCodeExecutor(
+        allow_egress=False,
+        timeout_seconds=20,
+    ),
+)
+```
+
+Four ADK design choices matter:
+
+1. **The instruction defines the workflow, not the security boundary.** It asks Gemini to establish a baseline, repair from evidence, retest, snapshot, and clean up. Host code still validates every request.
+2. **Plain Python functions become typed ADK tools.** ADK derives tool schemas from signatures and docstrings. Gemini can supply `workspace_id` and `source_code`; it cannot supply a shell string, host path, mount target, environment, or egress flag.
+3. **The agent has two execution paths.** The fixed `FunctionTool` path implements this repository-review product workflow. The audited `code_executor` remains attached for explicit ADK code-execution events, but the demo intentionally prefers the narrower, easier-to-audit tools.
+4. **The ADK Runner owns sessions and events.** Every function call and response becomes an inspectable event. The committed evidence contains 15 returned events; ADK Web renders those same objects.
+
+![ADK Agent, Runner, FunctionTools, and executor design](../assets/adk-agent-design.png)
+
+### The tool contract is where the use case becomes testable
+
+For example, the model does not receive a general-purpose `run_shell` capability. It receives a test-specific function:
+
+```python
+def run_test_suite(workspace_id: str) -> dict[str, object]:
+    _workspace(workspace_id)  # validates the name and instance-local path
+    started = time.perf_counter()
+    result = RUNTIME.exec(
+        workspace_id,
+        [
+            RUNTIME.python_executable(),
+            "-m", "pytest", "-q", "--disable-warnings",
+            "/workspace/tests",
+        ],
+        timeout_seconds=120,
+    )
+    return {
+        "status": "passed" if result.returncode == 0 else "failed",
+        "returncode": result.returncode,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+        "stdout": result.stdout[-8_000:],
+        "stderr": result.stderr[-4_000:],
+    }
+```
+
+The model-proposed repair is also handled as data before it is ever executed:
+
+```python
+def write_candidate_rule_engine(
+    workspace_id: str,
+    source_code: str,
+) -> dict[str, object]:
+    workspace = _workspace(workspace_id)
+    decision = evaluate_python(
+        source_code,
+        ExecutionPolicy(
+            max_code_bytes=24_576,
+            blocked_modules=frozenset(),
+            blocked_calls=frozenset(),
+        ),
+    )
+    if not decision.allowed:
+        return {"status": "rejected", "reason": decision.reason}
+
+    destination = workspace / "rule_engine.py"  # fixed path
+    destination.write_text(source_code)
+    return {
+        "status": "written",
+        "sha256": hashlib.sha256(source_code.encode()).hexdigest(),
+        "bytes": len(source_code.encode()),
+    }
+```
+
+The AST/size check is a quality gate. The subsequent import and test still happen only in the native child sandbox.
+
+### Four prompts, four bounded evidence paths
+
+The same agent supports four deliberately different test cases. Each maps to an explicit tool sequence and a success signal that can be checked without trusting the final prose answer.
+
+![ADK use cases and test obligations](../assets/adk-test-plan.png)
+
+- **Full repository review:** prove failure → repair → passing retest → snapshot → cleanup.
+- **Boundary audit:** prove the parent canary, metadata server, and public egress remain unreachable.
+- **Lifecycle benchmark:** collect 30 create/exec/delete observations without mixing in Gemini or Cloud Run cold start.
+- **Cost planning:** calculate a list-price estimate from explicit inputs without launching a sandbox.
+
+This split matters operationally: `benchmark_sandbox_startup` and `estimate_monthly_cost` are diagnostic tools, not hidden side effects inside the repair path.
 
 ---
 
@@ -160,7 +250,7 @@ Two results need careful interpretation:
 
 The distinction matters more than a simplistic “root is read-only” claim.
 
-![ADK Web security-probe response](../assets/screenshots/adk-web-security-probe.png)
+![Annotated ADK Web security-probe response](../assets/annotated-security-probe.png)
 
 ---
 
@@ -238,7 +328,7 @@ The evidence artifact contains 15 returned events: six lifecycle function calls,
 
 For reproducible documentation, the capture script imports that committed event array into ADK Web instead of spending model quota on a second run. The event sequence remains inspectable as native ADK UI objects:
 
-![ADK Web multi-tool event sequence](../assets/screenshots/adk-web-tool-sequence.png)
+![Annotated ADK Web multi-tool event sequence](../assets/annotated-tool-sequence.png)
 
 The final response links the repair, passing tests, snapshot, and teardown:
 
@@ -246,7 +336,7 @@ The final response links the repair, passing tests, snapshot, and teardown:
 
 Selecting the first `run_test_suite` response exposes the raw failing baseline instead of a prose summary:
 
-![ADK Web raw failing pytest response](../assets/screenshots/adk-web-failing-tests.png)
+![Annotated ADK Web raw failing pytest response](../assets/annotated-failing-tests.png)
 
 An imported event session does not recreate the backend trace-span store. The screenshots therefore show event evidence only; they do not pretend that a replayed session contains live timing spans. Capture the **Traces** tab during the original run if span-level timing is required.
 
@@ -314,17 +404,7 @@ inside one warm Cloud Run service instance:
   = create + execute + delete
 ```
 
-Thirty samples succeeded:
-
-| Metric | Latency |
-|---|---:|
-| Minimum | 408.941 ms |
-| p50 | 428.347 ms |
-| Mean | 431.902 ms |
-| p95 | 455.854 ms |
-| p99 | 470.934 ms |
-| Maximum | 470.934 ms |
-| Failures | 0 |
+All 30 samples succeeded. The chart carries the summary statistics and every individual observation, so Medium readers do not need an unsupported table.
 
 ![Raw Cloud Run sandbox latency distribution](../assets/latency-results.png)
 
@@ -358,29 +438,21 @@ Do not collapse all of those stages into “sandbox startup.” Optimize the sta
 
 Cloud Run sandboxes have no separate premium; child work consumes the parent instance's allocated CPU and memory. That does not mean execution is free.
 
-For a transparent scenario:
+For a modest, easier-to-reason-about scenario:
 
 ```text
-10,000 invocations/month
-30 active seconds/invocation
+1,000 repository reviews/month
+30 active sandbox seconds/review
 2 vCPU + 2 GiB
 observed effective concurrency = 2
-4,000 Gemini input tokens + 1,000 output tokens/invocation
+3,000 Gemini input tokens + 500 output tokens/review
 ```
 
-The list-price estimate is:
+The reproducible list-price model returns **$9.7954/month before free tier**:
 
-| Component | Cost |
-|---|---:|
-| Cloud Run compute | $7.950 |
-| Cloud Run requests | $0.004 |
-| Gemini input | $60.000 |
-| Gemini output | $90.000 |
-| **Total** | **$157.954** |
+![Cloud Run and Gemini cost breakdown for 1,000 monthly reviews](../assets/cost-breakdown.png)
 
-![Cloud Run and Gemini cost breakdown](../assets/cost-breakdown.png)
-
-In this scenario, model tokens are **94.97%** of estimated cost. The optimization order should usually be:
+In this scenario, model tokens are **91.88%** of estimated cost: $4.50 input plus $4.50 output. Cloud Run compute contributes $0.795, and requests contribute $0.0004. The optimization order should usually be:
 
 1. eliminate unnecessary model turns and repeated repository context;
 2. cap output and reasoning budgets;
@@ -402,16 +474,7 @@ The child sandboxes share the containing Cloud Run instance's 2 vCPU and 2 GiB. 
 
 These products expose different isolation units and billing meters. Published latency claims are not directly comparable.
 
-| Dimension | Cloud Run sandbox | GKE Agent Sandbox | E2B | Daytona | Modal Sandbox |
-|---|---|---|---|---|---|
-| Best fit | Bursty agent already hosted on Cloud Run | Cluster-native high-scale/custom policy | Hosted durable sandbox sessions | Rich container/VM lifecycle | Serverless sandboxes, volumes, tunnels, GPU options |
-| Isolation/lifecycle | Child sandbox inside service instance | Sandbox Pod managed by GKE | Hosted isolated sandbox | Hosted container or VM | Secure Modal runtime |
-| Default outbound network | Denied unless host enables it | Depends on managed policy/template | Configurable | Configurable | Explicitly configured capabilities |
-| Persistence | Overlay/tar/mount; instance-local unless exported | Pod snapshots and Kubernetes storage | Pause/resume and snapshots | Stop/archive/snapshot/fork | Filesystem snapshots and volumes |
-| Long-running sessions | Bound to one Cloud Run request/instance | Strong fit | Hosted sessions up to plan limits | Strong fit | Up to documented sandbox lifetime |
-| Operational burden | Lowest for existing Cloud Run app | Highest; own cluster capacity/policy | Vendor managed | Vendor managed | Vendor managed |
-| Published latency reference | Google: 500 ms average for 1,000 start/exec/stop requests | Google: warm-pool p90 200 ms; 300 allocations/s/cluster | Measure your workload | Vendor advertises under 90 ms code-to-execution | No equivalent number used here |
-| Billing shape | Normal Cloud Run CPU/memory/request charges | GKE nodes, control plane, storage, network | Per-second resources + plan | Usage-based resources | Per-second max(requested, actual) resources |
+![Cloud Run, GKE Agent Sandbox, E2B, Daytona, and Modal decision matrix](../assets/platform-decision-matrix.png)
 
 Choose Cloud Run when:
 
